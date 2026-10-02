@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Цвет черты — интерактивная фарфоровая плитка</title>
+
+<!-- Шрифт Oswald -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  *{box-sizing:border-box}
+  html,body{overscroll-behavior:none}
+  body{
+    margin:0; min-height:100vh; padding:26px 16px 44px;
+    font-family:"Oswald",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-weight:300;
+    letter-spacing:.02em;
+    background:radial-gradient(1200px 600px at 50% -10%,#2b3240,#11141a 65%);
+    color:#e8ecf2;
+    -webkit-user-select:none; user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  header{max-width:1440px;margin:0 auto 22px}
+  h1{
+    font-size:clamp(24px,4vw,34px);
+    font-weight:600;letter-spacing:.03em;text-transform:uppercase;
+    margin:0 0 10px;
+  }
+  header p{margin:0;color:#93a0b5;font-size:14.5px;font-weight:300;line-height:1.6;max-width:80ch}
+  header b{color:#cfd8e6;font-weight:500}
+
+  /* ---------- три колонки: картинка | плитка | образцы ---------- */
+  .wrap{
+    max-width:1440px;margin:0 auto;
+    display:grid;
+    grid-template-columns:380px minmax(0,1fr) 320px;
+    gap:22px;align-items:start;
+  }
+  @media(max-width:1280px){
+    .wrap{grid-template-columns:320px minmax(0,1fr) 280px;gap:18px}
+  }
+  @media(max-width:1080px){
+    .wrap{grid-template-columns:280px minmax(0,1fr) 240px;gap:14px}
+  }
+  @media(max-width:920px){
+    .wrap{grid-template-columns:240px minmax(0,1fr) 220px;gap:12px}
+  }
+  @media(max-width:760px){
+    .wrap{grid-template-columns:1fr}
+  }
+
+  /* ---------- общий стиль панелей ---------- */
+  .tray, .image-panel{
+    background:rgba(255,255,255,.045);
+    border:1px solid rgba(255,255,255,.09);
+    border-radius:18px;padding:14px;
+  }
+  .tray h2, .image-panel h2{
+    font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+    color:#8b98ae;margin:0 0 12px;font-weight:500;
+  }
+
+  /* ---------- лоток с минералами ---------- */
+  .minerals{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  @media(max-width:920px){ .minerals{grid-template-columns:1fr} }
+
+  .mineral{
+    display:flex;flex-direction:column;align-items:center;gap:9px;
+    padding:14px 8px 12px;border-radius:14px;
+    background:rgba(255,255,255,.035);
+    border:1px solid rgba(255,255,255,.07);
+    cursor:grab;touch-action:none;
+    transition:background .15s,border-color .15s,transform .12s;
+  }
+  .mineral:hover{background:rgba(255,255,255,.085);border-color:rgba(255,255,255,.16)}
+  .mineral:active{transform:scale(.97)}
+  .mineral .name{
+    font-size:12px;font-weight:400;letter-spacing:.05em;
+    color:#b9c4d6;text-align:center;text-transform:uppercase;
+  }
+  .mineral.dragging{
+    position:fixed;z-index:9999;margin:0!important;
+    background:transparent;border-color:transparent;
+    box-shadow:none;cursor:grabbing;opacity:.92;
+    transform:none;transition:none;
+  }
+  .mineral.dragging .name{display:none}
+  .mineral.dragging img{
+    transform:scale(1.2);
+    filter:drop-shadow(0 14px 18px rgba(0,0,0,.6));
+  }
+  .mineral img{
+    width:96px;height:96px;flex:none;
+    object-fit:contain;
+    background:transparent;
+    filter:drop-shadow(0 6px 10px rgba(0,0,0,.5));
+    transition:transform .15s;
+    border-radius:var(--shape, 50%);
+  }
+  @media(max-width:1080px){
+    .mineral img{width:80px;height:80px}
+  }
+  @media(max-width:920px){
+    .mineral img{width:64px;height:64px}
+  }
+
+  /* ---------- плитка ---------- */
+  .plate-area{display:flex;flex-direction:column;gap:14px;min-width:0}
+  .plate{
+    position:relative;height:370px;border-radius:16px;overflow:hidden;
+    background:linear-gradient(163deg,#fcfcf9 0%,#f4f3ee 42%,#e8e6de 100%);
+    box-shadow:
+      0 22px 48px rgba(0,0,0,.55),
+      0 0 0 1px rgba(255,255,255,.07),
+      inset 0 0 0 1px rgba(0,0,0,.07),
+      inset 0 -18px 36px rgba(0,0,0,.055);
+    cursor:crosshair;
+  }
+  .plate::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background-image:
+      radial-gradient(rgba(120,115,105,.13) .8px,transparent .9px),
+      radial-gradient(rgba(255,255,255,.5) .7px,transparent .8px);
+    background-size:5px 5px,7px 7px;
+    background-position:0 0,3px 4px;
+    opacity:.55;
+  }
+  .plate canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .hint{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    text-align:center;padding:0 24px;
+    color:#a9a49a;font-size:14.5px;font-weight:300;letter-spacing:.03em;
+    line-height:1.6;pointer-events:none;transition:opacity .5s;
+  }
+  .hint span{
+    background:rgba(255,255,255,.72);
+    padding:10px 20px;border-radius:999px;backdrop-filter:blur(2px);
+  }
+  @media(max-width:760px){ .plate{height:320px} }
+
+  /* ---------- результаты ---------- */
+  .panel{
+    background:rgba(255,255,255,.045);
+    border:1px solid rgba(255,255,255,.09);
+    border-radius:18px;padding:14px 16px;
+    display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;
+  }
+  .panel h2{
+    font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+    color:#8b98ae;margin:0;font-weight:500;width:100%;
+  }
+  .chips{display:flex;flex-wrap:wrap;gap:8px;flex:1 1 260px}
+  .chips .empty{font-size:13px;color:#727e93;font-weight:300;letter-spacing:.03em}
+  .chip{
+    display:flex;align-items:center;gap:9px;
+    padding:6px 14px 6px 8px;border-radius:999px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.1);
+    font-size:12.5px;font-weight:300;letter-spacing:.04em;
+    color:#cfd8e6;animation:pop .28s ease-out;
+  }
+  @keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+  .sw{
+    width:17px;height:17px;border-radius:50%;flex:none;
+    background:var(--c);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.35),0 0 10px var(--c);
+  }
+  button{
+    font-family:"Oswald",system-ui,sans-serif;
+    font-size:13px;font-weight:400;
+    letter-spacing:.08em;text-transform:uppercase;
+    color:#dbe3ef;background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.14);
+    padding:9px 18px;border-radius:11px;cursor:pointer;
+    transition:background .15s,transform .1s;white-space:nowrap;
+  }
+  button:hover{background:rgba(255,255,255,.15)}
+  button:active{transform:scale(.96)}
+
+  /* ===================================================== */
+  /* ЛЕВАЯ ПАНЕЛЬ — просто место для картинки              */
+  /* ===================================================== */
+  .image-panel{display:flex;flex-direction:column}
+
+  .image-slot{
+    flex:1;
+    min-height:300px;                 /* вертикальное, вытянутое поле */
+    border-radius:14px;
+    border:2px dashed rgba(255,255,255,.16);
+    background:transparent;
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;
+  }
+  /* любая картинка, вставленная внутрь, вписывается целиком */
+  .image-slot img{
+    max-width:100%;
+    max-height:100%;
+    width:auto;
+    height:auto;
+    object-fit:contain;
+    display:block;
+    filter:drop-shadow(0 10px 24px rgba(0,0,0,.55));
+  }
+
+  @media(max-width:1080px){
+    .image-slot{min-height:520px}
+  }
+  @media(max-width:920px){
+    .image-slot{min-height:440px}
+  }
+  @media(max-width:760px){
+    .image-slot{min-height:340px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Цвет черты 🪨</h1>
+  <p>Перетащи минерал по <b>неглазурованной фарфоровой плитке</b> — останется след из тонкого порошка.
+     </p><p>Его цвет часто совсем не такой, как у самого минерала или горной породы. 
+	 </p><p>Именно поэтому гематит не спутать с галенитом,
+     а пирит — с золотом.</p>
+</header>
+
+<div class="wrap">
+
+  <!-- ============ ЛЕВАЯ КОЛОНКА: место для вашей картинки ============ -->
+  <div class="image-panel">
+    <h2>Своя картинка</h2>
+
+    <div class="image-slot">
+      <img src="lui.png" alt="">
+    </div>
+  </div>
+
+  <!-- ============ ЦЕНТР: плитка ============ -->
+  <div class="plate-area">
+    <div class="plate" id="plate">
+      <canvas id="streak"></canvas>
+      <div class="hint" id="hint"><span>Возьмите минерал и проведите им по плитке</span></div>
+    </div>
+
+    <div class="panel">
+      <h2>Полученные цвета черты</h2>
+      <div class="chips" id="chips"><span class="empty">Пока ничего не проверено</span></div>
+      <button id="clear">Очистить плитку</button>
+    </div>
+  </div>
+
+  <!-- ============ ПРАВАЯ КОЛОНКА: образцы ============ -->
+  <div class="tray">
+    <h2>Образцы</h2>
+    <div class="minerals" id="minerals"></div>
+  </div>
+
+</div>
+
+<script>
+/* ================= данные: только 4 минерала ================= */
+const MINERALS = [
+  { id:'hematite',  name:'Гематит',  streak:'#8e2f22', desc:'вишнёво-красная',
+    shape:'46% 54% 58% 42% / 52% 44% 56% 48%',
+    img:'gem.png' },
+  { id:'pyrite',    name:'Пирит',    streak:'#38402f', desc:'зеленовато-чёрная',
+    shape:'58% 42% 46% 54% / 44% 58% 42% 56%',
+    img:'pirit.png' },
+  { id:'cinnabar',  name:'Киноварь', streak:'#e8452f', desc:'ярко-красная',
+    shape:'40% 60% 52% 48% / 56% 46% 54% 44%',
+    img:'kino.png' },
+  { id:'limonite',  name:'Лимонит',  streak:'#c9922e', desc:'жёлто-бурая',
+    shape:'60% 40% 54% 46% / 42% 56% 44% 58%',
+    img:'limonit.png' },
+];
+
+/* ================= элементы ================= */
+const canvas  = document.getElementById('streak');
+const ctx     = canvas.getContext('2d');
+const plate   = document.getElementById('plate');
+const hint    = document.getElementById('hint');
+const chipsEl = document.getElementById('chips');
+
+const strokes = [];
+const used    = new Map();
+let drag = null;
+
+/* ================= лоток ================= */
+const trayEl = document.getElementById('minerals');
+MINERALS.forEach(m => {
+  const el = document.createElement('div');
+  el.className = 'mineral';
+  el.dataset.id = m.id;
+  el.innerHTML =
+    `<img src="${m.img}" alt="${m.name}" draggable="false"
+          style="--shape:${m.shape}">
+     <div class="name">${m.name}</div>`;
+  el.addEventListener('pointerdown', onDown);
+  trayEl.appendChild(el);
+});
+
+/* ================= канва ================= */
+function fitCanvas(){
+  const r = canvas.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width  = Math.max(1, Math.round(r.width  * dpr));
+  canvas.height = Math.max(1, Math.round(r.height * dpr));
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  redraw();
+}
+new ResizeObserver(fitCanvas).observe(plate);
+window.addEventListener('load', fitCanvas);
+
+/* ================= рисование ================= */
+function drawChunk(seg, i){
+  const a = seg.pts[i-1], b = seg.pts[i];
+  if (!a || !b) return;
+  ctx.save();
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+  ctx.globalAlpha = 0.075; ctx.strokeStyle = '#33302c'; ctx.lineWidth = 13;
+  ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+
+  ctx.globalAlpha = 0.17; ctx.strokeStyle = seg.color; ctx.lineWidth = 18;
+  ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+
+  ctx.globalAlpha = 0.88; ctx.lineWidth = 7.5;
+  ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+  ctx.restore();
+
+  for (let k = 0; k < 5; k++){
+    const t = Math.random();
+    const x = a.x + (b.x - a.x) * t + (Math.random() - .5) * 17;
+    const y = a.y + (b.y - a.y) * t + (Math.random() - .5) * 17;
+    ctx.globalAlpha = 0.10 + Math.random() * 0.35;
+    ctx.fillStyle = seg.color;
+    ctx.beginPath(); ctx.arc(x, y, 0.6 + Math.random() * 1.9, 0, 6.2832); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+function drawDot(seg, p){
+  ctx.save();
+  ctx.globalAlpha = .10; ctx.fillStyle = '#33302c';
+  ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, 6.2832); ctx.fill();
+  ctx.globalAlpha = .16; ctx.fillStyle = seg.color;
+  ctx.beginPath(); ctx.arc(p.x, p.y, 11, 0, 6.2832); ctx.fill();
+  ctx.globalAlpha = .85;
+  ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, 6.2832); ctx.fill();
+  ctx.restore();
+}
+function redraw(){
+  const r = canvas.getBoundingClientRect();
+  ctx.clearRect(0, 0, r.width, r.height);
+  for (const seg of strokes){
+    if (seg.pts.length === 1) drawDot(seg, seg.pts[0]);
+    for (let i = 1; i < seg.pts.length; i++) drawChunk(seg, i);
+  }
+}
+
+/* ================= перетаскивание ================= */
+function onDown(e){
+  if (drag) return;
+  const el = e.currentTarget;
+  const m  = MINERALS.find(x => x.id === el.dataset.id);
+  const r  = el.getBoundingClientRect();
+
+  const ph = document.createElement('div');
+  ph.style.width  = r.width  + 'px';
+  ph.style.height = r.height + 'px';
+  el.parentNode.insertBefore(ph, el);
+
+  drag = { el, mineral:m, offX:e.clientX-r.left, offY:e.clientY-r.top,
+           segment:null, placeholder:ph };
+
+  el.style.width = r.width+'px'; el.style.height = r.height+'px';
+  el.style.left  = r.left+'px';  el.style.top    = r.top+'px';
+  el.classList.add('dragging');
+
+  try { el.setPointerCapture(e.pointerId); } catch(_) {}
+  el.addEventListener('pointermove', onMove);
+  el.addEventListener('pointerup', onUp);
+  el.addEventListener('pointercancel', onUp);
+
+  hideHint();
+  e.preventDefault();
+}
+function onMove(e){
+  if (!drag) return;
+  const el = drag.el;
+  el.style.left = (e.clientX - drag.offX) + 'px';
+  el.style.top  = (e.clientY - drag.offY) + 'px';
+
+  const r  = el.getBoundingClientRect();
+  const cx = r.left + r.width / 2;
+  const cy = r.bottom - r.height * 0.12;
+
+  const cr = canvas.getBoundingClientRect();
+  const inside = cx >= cr.left && cx <= cr.right && cy >= cr.top && cy <= cr.bottom;
+  if (!inside){ drag.segment = null; return; }
+
+  const p = { x: cx - cr.left, y: cy - cr.top };
+  if (!drag.segment){
+    drag.segment = { color: drag.mineral.streak, pts: [] };
+    strokes.push(drag.segment);
+  }
+  const pts = drag.segment.pts;
+  const last = pts[pts.length - 1];
+  if (last && Math.hypot(p.x-last.x, p.y-last.y) < 1.4) return;
+  pts.push(p);
+  if (pts.length === 1) drawDot(drag.segment, p);
+  else drawChunk(drag.segment, pts.length - 1);
+  markUsed(drag.mineral);
+}
+function onUp(){
+  if (!drag) return;
+  const el = drag.el;
+  el.removeEventListener('pointermove', onMove);
+  el.removeEventListener('pointerup', onUp);
+  el.removeEventListener('pointercancel', onUp);
+  el.classList.remove('dragging');
+  el.style.left = el.style.top = el.style.width = el.style.height = '';
+  drag.placeholder.remove();
+  drag = null;
+}
+
+/* ================= UI ================= */
+function hideHint(){ hint.style.opacity = 0; }
+function markUsed(m){
+  if (used.has(m.id)) return;
+  used.set(m.id, m); renderChips();
+}
+function renderChips(){
+  if (used.size === 0){
+    chipsEl.innerHTML = '<span class="empty">Пока ничего не проверено</span>';
+    return;
+  }
+  chipsEl.innerHTML = '';
+  for (const m of used.values()){
+    const c = document.createElement('div');
+    c.className = 'chip';
+    c.style.setProperty('--c', m.streak);
+    c.innerHTML = `<span class="sw"></span><span>${m.name} — ${m.desc}</span>`;
+    chipsEl.appendChild(c);
+  }
+}
+document.getElementById('clear').addEventListener('click', () => {
+  strokes.length = 0; used.clear();
+  redraw(); renderChips(); hint.style.opacity = 1;
+});
+
+/* ================= старт ================= */
+fitCanvas();
+renderChips();
+</script>
+</body>
+</html>
