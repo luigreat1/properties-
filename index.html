@@ -100,23 +100,18 @@
     transition:transform .15s;
     border-radius:var(--shape, 50%);
   }
-  @media(max-width:1080px){
-    .mineral img{width:80px;height:80px}
-  }
-  @media(max-width:920px){
-    .mineral img{width:64px;height:64px}
-  }
 
   /* ---------- плитка ---------- */
   .plate-area{display:flex;flex-direction:column;gap:14px;min-width:0}
   .plate{
-    position:relative;height:370px;border-radius:16px;overflow:hidden;
+    position:relative;height:200px;          /* было 370px — уменьшено ~в 3 раза по площади */
+    border-radius:14px;overflow:hidden;
     background:linear-gradient(163deg,#fcfcf9 0%,#f4f3ee 42%,#e8e6de 100%);
     box-shadow:
-      0 22px 48px rgba(0,0,0,.55),
+      0 14px 30px rgba(0,0,0,.55),
       0 0 0 1px rgba(255,255,255,.07),
       inset 0 0 0 1px rgba(0,0,0,.07),
-      inset 0 -18px 36px rgba(0,0,0,.055);
+      inset 0 -10px 22px rgba(0,0,0,.055);
     cursor:crosshair;
   }
   .plate::before{
@@ -131,22 +126,21 @@
   .plate canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
   .hint{
     position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    text-align:center;padding:0 24px;
-    color:#a9a49a;font-size:14.5px;font-weight:300;letter-spacing:.03em;
-    line-height:1.6;pointer-events:none;transition:opacity .5s;
+    text-align:center;padding:0 18px;
+    color:#a9a49a;font-size:13px;font-weight:300;letter-spacing:.03em;
+    line-height:1.5;pointer-events:none;transition:opacity .5s;
   }
   .hint span{
     background:rgba(255,255,255,.72);
-    padding:10px 20px;border-radius:999px;backdrop-filter:blur(2px);
+    padding:8px 16px;border-radius:999px;backdrop-filter:blur(2px);
   }
-  @media(max-width:760px){ .plate{height:320px} }
 
   /* ---------- результаты ---------- */
   .panel{
     background:rgba(255,255,255,.045);
     border:1px solid rgba(255,255,255,.09);
-    border-radius:18px;padding:14px 16px;
-    display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;
+    border-radius:18px;padding:12px 14px;
+    display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;
   }
   .panel h2{
     font-size:12px;letter-spacing:.18em;text-transform:uppercase;
@@ -187,14 +181,13 @@
 
   .image-slot{
     flex:1;
-    min-height:300px;                 /* вертикальное, вытянутое поле */
+    min-height:300px;
     border-radius:14px;
     border:2px dashed rgba(255,255,255,.16);
     background:transparent;
     display:flex;align-items:center;justify-content:center;
     overflow:hidden;
   }
-  /* любая картинка, вставленная внутрь, вписывается целиком */
   .image-slot img{
     max-width:100%;
     max-height:100%;
@@ -205,14 +198,71 @@
     filter:drop-shadow(0 10px 24px rgba(0,0,0,.55));
   }
 
+  /* ===================================================== */
+  /* МОБИЛЬНАЯ АДАПТАЦИЯ                                   */
+  /* ===================================================== */
   @media(max-width:1080px){
-    .image-slot{min-height:520px}
+    .image-slot{min-height:420px}
   }
   @media(max-width:920px){
-    .image-slot{min-height:440px}
-  }
-  @media(max-width:760px){
     .image-slot{min-height:340px}
+  }
+
+  /* планшет/большой телефон */
+  @media(max-width:760px){
+    body{padding:18px 12px 32px}
+    .wrap{gap:14px}
+
+    /* порядок: картинка → плитка → образцы */
+    .image-panel{order:1}
+    .plate-area{order:2}
+    .tray{order:3}
+
+    .image-slot{min-height:220px}
+
+    /* плитка ещё меньше, но достаточна для жеста */
+    .plate{height:150px;border-radius:12px}
+    .hint{font-size:12px;padding:0 12px}
+    .hint span{padding:7px 13px}
+
+    .panel{padding:10px 12px;gap:8px}
+    .chips{gap:6px}
+    .chip{font-size:11.5px;padding:5px 11px 5px 7px}
+    .sw{width:14px;height:14px}
+
+    button{font-size:12px;padding:8px 14px}
+
+    /* лоток образцов: 2 колонки, компактные карточки */
+    .tray{padding:12px}
+    .minerals{grid-template-columns:repeat(2,1fr);gap:10px}
+    .mineral{padding:10px 6px 9px;gap:6px;border-radius:12px}
+    .mineral .name{font-size:11px;letter-spacing:.04em}
+    .mineral img{width:56px;height:56px}
+  }
+
+  /* узкие телефоны */
+  @media(max-width:420px){
+    body{padding:14px 10px 26px}
+    h1{font-size:22px}
+    header p{font-size:13px}
+
+    .plate{height:130px}
+    .hint{font-size:11px}
+
+    .minerals{gap:8px}
+    .mineral{padding:8px 4px 7px;gap:5px}
+    .mineral .name{font-size:10.5px}
+    .mineral img{width:44px;height:44px}
+
+    .image-slot{min-height:180px}
+    .panel h2{font-size:11px;letter-spacing:.14em}
+    .chips .empty{font-size:12px}
+    button{font-size:11.5px;padding:7px 12px}
+  }
+
+  /* если у пользователя включён режим «уменьшить анимацию» */
+  @media(prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important}
   }
 </style>
 </head>
